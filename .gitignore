@@ -1,0 +1,6 @@
+# binary format
+*.elf
+*.bin
+
+# build dir
+build/
