@@ -1,6 +1,9 @@
 #include <cstdint>
 
-typedef uint8_t ret_val;
+typedef enum{
+    OK = 0 ,
+    ERROR
+} ret_val;
 
 struct trans_data_t{
     uint8_t* data_ptr;

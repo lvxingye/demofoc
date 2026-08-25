@@ -11,6 +11,9 @@ class foc {
 public:
     struct configs_t{
         float u_dc;
+        uint8_t pole_pairs;
+        uint8_t is_swapped=0;   // weather the actual phase is reversed
+                                // and weather b and c phase has been swapped
     };
 
     // todo: pid controller

@@ -15,6 +15,8 @@ public:
     transforms_t(const foc::configs_t& _configs);
     ~transforms_t();
 
+    
+
     d_q_t        park_transform(alpha_beta_t x, float theta);
     alpha_beta_t inv_park_transform(d_q_t x, float theta);
     alpha_beta_t clark_transform(abc_phase_t x);
