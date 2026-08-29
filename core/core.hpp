@@ -6,11 +6,17 @@
 #include "devices/encoder/common.hpp"
 #include "platform/common.hpp"
 #include "utils/utils.hpp"
-#include "utils/configs.hpp"
 
 class foc
 {
 public:
+  struct configs_t
+  {
+    float u_dc;
+    uint8_t pole_pairs;
+    uint8_t is_swapped = 0; // weather the actual phase is reversed
+                            // and weather b and c phase has been swapped
+  };
 
   // todo: pid controller
   // todo: close loop logic something
@@ -23,12 +29,11 @@ public:
 private:
   float u_dc = 0.0f;
 
-  foc_configs_t configs;
+  configs_t configs;
 
   encoder_t encoder;
   current_sensor_t current_sensor;
   controller_t controller;
 
-//   transforms_t algorithm;
-// algorithms shall not be here?
+  transforms_t algorithm;
 };
