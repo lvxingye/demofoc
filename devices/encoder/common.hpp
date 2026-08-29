@@ -1,4 +1,6 @@
 
+#pragma once
+
 class encoder_t {
 public:
     encoder_t()  = default;

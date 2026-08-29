@@ -1,9 +1,15 @@
+#pragma  once
+
 #include <cstdint>
 
-typedef enum{
+// contants
+#define PI 3.14159265359f
+
+
+using ret_val = enum : std::uint8_t{
     OK = 0 ,
     ERROR
-} ret_val;
+};
 
 struct trans_data_t{
     uint8_t* data_ptr;

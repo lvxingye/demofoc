@@ -1,0 +1,24 @@
+---
+CompileFlags:
+  CompilationDatabase: build
+  Remove:
+    - "-mlongcalls"
+  Add:
+    - "-isystem/home/lvxy/.espressif/tools/xtensa-esp-elf/esp-15.2.0_20251204/xtensa-esp-elf/picolibc/include"
+    - "-isystem/home/lvxy/.espressif/tools/xtensa-esp-elf/esp-15.2.0_20251204/xtensa-esp-elf/xtensa-esp-elf/include/c++/15.2.0"
+    - "-I/data/source/foc"
+    - "-std=c++17"
+    
+Diagnostics:
+  UnusedIncludes: None
+  # 工具链 cxxflags 里的 GCC 专用参数（如 -mlongcalls、-specs=...）经 @file
+  # 展开后 clang 不识别，压掉这类"未知参数"噪音；不影响代码自身的诊断。
+  Suppress:
+    - "drv_unknown_argument_with_suggestion"
+    - "drv_unknown_argument"
+  
+InlayHints:
+  Enabled: false
+
+Hover:
+  ShowAKA: true
