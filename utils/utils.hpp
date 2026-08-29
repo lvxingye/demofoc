@@ -2,17 +2,23 @@
 
 #include <cstdint>
 
-// contants
+// defines
 #define PI 3.14159265359f
 
 
-using ret_val = enum : std::uint8_t{
+#define INLINE_RET inline ret_val_t
+#define FUNC_RET ret_val_t
+
+#define RETURN_ON_ERR(x) return (!(ret_val_t)(x)?OK:ERROR)
+
+
+using ret_val_t = enum : std::uint8_t{
     OK = 0 ,
     ERROR
 };
 
 struct trans_data_t{
-    uint8_t* data_ptr;
+    uint8_t* data_buffer;
     uint8_t len;
 };
 
@@ -51,6 +57,6 @@ public:
 
     };
 
-    ret_val log(const char* tag,LOGGING_LEVEL level, const char* message);
+    ret_val_t log(const char* tag,LOGGING_LEVEL level, const char* message);
 };
 
