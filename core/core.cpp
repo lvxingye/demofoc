@@ -1,17 +1,17 @@
 #include "core.hpp"
 #include "algorithm.hpp"
+#include "utils/utils.hpp"
 
 // foc class
-foc::foc()
-    : algorithm(configs) {
-        // todo :device init
+foc::foc() {
+    // todo :device init
 
-        // todo :config init
-        // configs
-        // todo :algorithm init
+    // todo :config init
+    // configs
+    // todo :algorithm init
 
-        //...
-    };
+    //...
+};
 
 foc::~foc() {
     // todo :device deinit
@@ -31,8 +31,8 @@ ret_val foc::test_correct_phase() {
     controller.apply_phase_pwm({.a = 0.0f, .b = 0.0f, .c = 0.0f});
     // sleep(2)
 
-    // conventionally, u4(100) should be alianed to positive direction of x-axis ?
-    // i have some doubt about that
+    // conventionally, u4(100) should be alianed to positive
+    // direction of x-axis ? i have some doubt about that
     controller.apply_phase_pwm({.a = TEST_1_PWM, .b = 0.0f, .c = 0.0f});
     // sleep(2)
     shaft_angle_0 = encoder.get_phy_angle();
@@ -50,26 +50,26 @@ ret_val foc::test_correct_phase() {
         d_shaft_angle *= -1.0f;
     }
 
-    if (d_shaft_angle) {
-        return OK;
+    if (0.0f == d_shaft_angle) {
+        return ERROR;
     }
     configs.pole_pairs =
-        (uint8_t)(3.141592653589793f / 3.0f / (d_shaft_angle) + 0.5f);   //(pi/3)/theta
+        (uint8_t)(1.047197551196598f / (d_shaft_angle) + 0.5f); //(pi/3)/theta
 
-    return ERROR;
+    return OK;
 }
 
 ret_val foc::loop(bool is_open_loop = true) {
-    float        angle          = 0.0f;
-    d_q_t        target_d_q     = {.q = 0.0f, .d = 0.0f};
+    float angle                 = 0.0f;
+    d_q_t target_d_q            = {.d = 0.0f, .q = 0.0f};
     alpha_beta_t alpha_beta_res = {.alpha = 0.0f, .beta = 0.0f};
-    abc_phase_t  abc_phase_res  = {.a = 0.0f, .b = 0.0f, .c = 0.0f},
-                 final_duty     = {.a = 0.0f, .b = 0.0f, .c = 0.0f};
+    abc_phase_t abc_phase_res   = {.a = 0.0f, .b = 0.0f, .c = 0.0f},
+                final_duty      = {.a = 0.0f, .b = 0.0f, .c = 0.0f};
 
-    angle = foc::encoder.get_phy_angle();
+    angle = encoder.get_phy_angle();
 
-    alpha_beta_res = algorithm.inv_park_transform(target_d_q, angle);
-    final_duty     = algorithm.svpwm(alpha_beta_res);
+    alpha_beta_res = transforms_t::inv_park_transform(target_d_q, angle);
+    final_duty     = transforms_t::svpwm(alpha_beta_res);
 
     controller.apply_phase_pwm(final_duty);
 

@@ -35,5 +35,4 @@ private:
   current_sensor_t current_sensor;
   controller_t controller;
 
-  transforms_t algorithm;
 };
