@@ -12,7 +12,7 @@ CompileFlags:
     - "-isystem/home/lvxy/.espressif/tools/xtensa-esp-elf/esp-15.2.0_20251204/xtensa-esp-elf/picolibc/include"
     - "-isystem/home/lvxy/.espressif/tools/xtensa-esp-elf/esp-15.2.0_20251204/xtensa-esp-elf/xtensa-esp-elf/include/c++/15.2.0"
     - "-I/data/source/foc"
-    - "-std=c++17"
+    - "-std=c++20"
     
 Diagnostics:
   UnusedIncludes: None
@@ -21,6 +21,7 @@ Diagnostics:
   Suppress:
     - "drv_unknown_argument_with_suggestion"
     - "drv_unknown_argument"
+    - "modernize-use-using"
   
 InlayHints:
   Enabled: false

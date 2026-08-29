@@ -30,3 +30,5 @@ AlignAfterOpenBracket: DontAlign # 续行不对齐左括号，改用 Continuatio
 
 # ===== 等号对齐 =====
 AlignConsecutiveAssignments: true   # 连续赋值语句的 = 对齐
+
+NamespaceIndentation: All
