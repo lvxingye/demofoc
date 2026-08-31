@@ -17,7 +17,7 @@ using ret_val_t = enum : std::uint8_t{
     ERROR
 };
 
-struct trans_data_t{
+struct xfr_data_t{
     uint8_t* data_buffer;
     uint8_t len;
 };

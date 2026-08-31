@@ -4,6 +4,7 @@
 
 // #include "algorithm.hpp"
 #include "devices/encoder/common.hpp"
+#include "devices/wave_gen//common.hpp"
 #include "platform/common.hpp"
 #include "utils/utils.hpp"
 
@@ -23,8 +24,8 @@ public:
   foc ();
   ~foc ();
 
-  ret_val test_correct_phase ();
-  ret_val loop (bool);
+  ret_val_t test_correct_phase ();
+  ret_val_t loop (bool);
 
 private:
   float u_dc = 0.0f;
@@ -33,6 +34,6 @@ private:
 
   encoder_t encoder;
   current_sensor_t current_sensor;
-  controller_t controller;
+  wave_gen_controller_t controller;
 
 };

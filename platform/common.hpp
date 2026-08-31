@@ -10,7 +10,7 @@ namespace i2c {
 //     i2c();
 //     ~i2c();
 
-struct bus_config_t{};
+struct bus_config_t{};// to be added in the future
 struct dev_config_t{
     // uint8_t is_use_10_bit_addr=0;
     uint16_t dev_addr=0x0000;
@@ -20,12 +20,16 @@ struct dev_config_t{
 FUNC_RET init_bus(const bus_config_t &config);
 FUNC_RET deinit_bus();
 
+INLINE_RET init_dev(const dev_config_t &config);
+INLINE_RET deinit_dev();
+
+
     // wrapper functions for platform iic bus send data
-INLINE_RET send_bytes(const uint8_t mem_addr, const trans_data_t &data);
+INLINE_RET send_bytes(const uint8_t mem_addr, const xfr_data_t &data);
     // wrapper functions for platform iic bus receive data
-INLINE_RET recv_bytes(const uint8_t mem_addr, const trans_data_t &data);
-INLINE_RET write_mem(const uint8_t mem_addr, const trans_data_t &data);
-INLINE_RET read_mem(const uint8_t mem_addr, const trans_data_t &data);
+INLINE_RET recv_bytes(const uint8_t mem_addr, const xfr_data_t &data);
+INLINE_RET write_mem(const uint8_t mem_addr, const xfr_data_t &data);
+INLINE_RET read_mem(const uint8_t mem_addr, const xfr_data_t &data);
 
 }; // namespace i2c
 
@@ -39,8 +43,8 @@ namespace uart {
 FUNC_RET init();
 FUNC_RET deinit();
 
-INLINE_RET send_bytes(const uint8_t mem_addr, const trans_data_t &data);
-INLINE_RET recv_bytes(const uint8_t mem_addr, const trans_data_t &data);
+INLINE_RET send_bytes(const uint8_t mem_addr, const xfr_data_t &data);
+INLINE_RET recv_bytes(const uint8_t mem_addr, const xfr_data_t &data);
 }; // namespace uart
 // namespace pwm {
 //     pwm();
