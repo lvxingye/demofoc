@@ -18,6 +18,8 @@ namespace i2c {
     i2c_master_bus_handle_t bus_handle;
     i2c_master_dev_handle_t dev_handle;
 
+    uint8_t is_bus_initialized = false;
+
     // init and deinit functions
     INLINE_RET init_bus(const bus_config_t &config) {
         i2c_master_bus_config_t i2c_bus_config = {
@@ -29,13 +31,23 @@ namespace i2c {
             .flags             = {.enable_internal_pullup = true},
         };
 
-        return (ret_val_t)i2c_new_master_bus(&i2c_bus_config, &bus_handle);
+        if (ret_val_t::OK !=
+            (ret_val_t)i2c_new_master_bus(&i2c_bus_config, &bus_handle)) {
+            return ERROR;
+        }
+        is_bus_initialized = true;
+
+        return OK;
     }
 
     // clang-format off-next-line
     INLINE_RET deinit_bus() { return OK; }
 
     INLINE_RET init_dev(const dev_config_t &config) {
+        if (!is_bus_initialized) {
+            return ERROR;
+        }
+
         i2c_device_config_t _dev_config = {
             .dev_addr_length = IS_10BIT_ADDR(config.dev_addr),
             .device_address  = config.dev_addr,
@@ -51,15 +63,15 @@ namespace i2c {
 
     // data transfer functions
     // wrapper functions for platform iic bus send data
-    INLINE_RET send_bytes(const uint8_t mem_addr, const trans_data_t &data) {
+    INLINE_RET send_bytes(const uint8_t mem_addr, const xfr_data_t &data) {
         return (ret_val_t)i2c_master_transmit(
             dev_handle, data.data_buffer, data.len, TIMEOUT);
     }
-    INLINE_RET recv_bytes(const uint8_t mem_addr, const trans_data_t &data) {
+    INLINE_RET recv_bytes(const uint8_t mem_addr, const xfr_data_t &data) {
         return (ret_val_t)i2c_master_transmit(
             dev_handle, data.data_buffer, data.len, TIMEOUT);
     }
-    INLINE_RET write_mem(const uint8_t mem_addr, const trans_data_t &data) {
+    INLINE_RET write_mem(const uint8_t mem_addr, const xfr_data_t &data) {
         uint32_t ret = 0;
 
         ret = i2c_master_transmit(dev_handle, &mem_addr, 1, TIMEOUT);
@@ -74,7 +86,7 @@ namespace i2c {
 
         return OK;
     }
-    INLINE_RET read_mem(const uint8_t mem_addr, const trans_data_t &data) {
+    INLINE_RET read_mem(const uint8_t mem_addr, const xfr_data_t &data) {
         uint32_t ret = 0;
 
         ret = i2c_master_transmit(dev_handle, &mem_addr, 1, TIMEOUT);
