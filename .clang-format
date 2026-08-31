@@ -32,3 +32,6 @@ AlignAfterOpenBracket: DontAlign # 续行不对齐左括号，改用 Continuatio
 AlignConsecutiveAssignments: true   # 连续赋值语句的 = 对齐
 
 NamespaceIndentation: All
+
+
+BreakBeforeBraces: Attach  # 或 Attach, 根据你期望的括号位置选择
