@@ -1,12 +1,19 @@
 
 #pragma once
 
+#include <cstdint>
+
+#include "utils/utils.hpp"
+
 class encoder_t {
 public:
-    encoder_t()  = default;
-    ~encoder_t() = default;
+    encoder_t();
+    ~encoder_t();
 
-    float get_phy_angle();//return radius
+    FUNC_RET init();
+
+    inline float get_phy_angle(); // return radius
 
 private:
+    uint8_t is_initialized = false;
 };

@@ -1,11 +1,5 @@
 #pragma once
 
-// slave addresses
-#define AS5600_ADDRESS_7B (0x36) // 0b0110110  	(0x6C) //0b0110110
-#define AS5600_ADDRESS (AS5600_ADDRESS << 1)
-#define AS5600_READ (AS5600_ADDRESS | 0x01)
-#define AS5600_WRITE (AS5600_ADDRESS | 0x00)
-
 // slave rigisters
 // conf regs
 #define AS5600_REG_ZMCO (0x00)
