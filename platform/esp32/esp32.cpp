@@ -11,6 +11,7 @@
 #include "esp_err.h"
 
 // foc library header
+#include "hal/mcpwm_types.h"
 #include "platform/common.hpp"
 #include "utils/utils.hpp"
 
@@ -20,12 +21,11 @@
 namespace gpio {
 
     FUNC_RET init(const config_t &config) {
-        gpio_config_t _gpio_config = {
-            .pin_bit_mask = config.pin_bit_mask,
-            .mode         = GPIO_MODE_DISABLE,
-            .pull_up_en   = (gpio_pullup_t)0,
-            .pull_down_en = (gpio_pulldown_t)0,
-            .intr_type    = (gpio_int_type_t)config.intr_type};
+        gpio_config_t _gpio_config = {.pin_bit_mask = config.pin_bit_mask,
+            .mode                                   = GPIO_MODE_DISABLE,
+            .pull_up_en                             = (gpio_pullup_t)0,
+            .pull_down_en                           = (gpio_pulldown_t)0,
+            .intr_type = (gpio_int_type_t)config.intr_type};
 
         switch (config.mode) {
         case off:
@@ -57,8 +57,7 @@ namespace gpio {
     FUNC_RET deinit();
 
     INLINE_RET set_pin_level(uint8_t pin, level level) {
-        if (ESP_OK !=
-            gpio_set_level((gpio_num_t)pin, (uint32_t)level)) {
+        if (ESP_OK != gpio_set_level((gpio_num_t)pin, (uint32_t)level)) {
             return ERROR;
         }
         return OK;
@@ -79,7 +78,7 @@ namespace i2c {
     // here. so call functions init_dev and init_bus, not
     // add_device and add_bus
 #define TIMEOUT 1
-#define IS_10BIT_ADDR(x)                                        \
+#define IS_10BIT_ADDR(x)                                                  \
     (((x) >> 8) ? I2C_ADDR_BIT_LEN_10 : I2C_ADDR_BIT_LEN_7)
 
     // handles
@@ -96,11 +95,10 @@ namespace i2c {
             .scl_io_num        = GPIO_NUM_22,
             .clk_source        = I2C_CLK_SRC_DEFAULT,
             .glitch_ignore_cnt = 7,
-            .flags = {.enable_internal_pullup = true},
+            .flags             = {.enable_internal_pullup = true},
         };
 
-        if (ESP_OK !=
-            i2c_new_master_bus(&i2c_bus_config, &bus_handle)) {
+        if (ESP_OK != i2c_new_master_bus(&i2c_bus_config, &bus_handle)) {
             return ERROR;
         }
         is_bus_initialized = true;
@@ -121,8 +119,8 @@ namespace i2c {
             .device_address  = config.dev_addr,
             .scl_speed_hz    = config.scl_speed_hz,
         };
-        if (ESP_OK != i2c_master_bus_add_device(bus_handle,
-                          &_dev_config, &dev_handle)) {
+        if (ESP_OK != i2c_master_bus_add_device(
+                          bus_handle, &_dev_config, &dev_handle)) {
             return ERROR;
         }
         return OK;
@@ -133,28 +131,24 @@ namespace i2c {
 
     // data transfer functions
     // wrapper functions for platform iic bus send data
-    INLINE_RET send_bytes(
-        const uint8_t mem_addr, const xfr_data_t &data) {
-        if (ESP_OK != i2c_master_transmit(dev_handle,
-                          data.data_buffer, data.len, TIMEOUT)) {
+    INLINE_RET send_bytes(const uint8_t mem_addr, const xfr_data_t &data) {
+        if (ESP_OK != i2c_master_transmit(dev_handle, data.data_buffer,
+                          data.len, TIMEOUT)) {
             return ERROR;
         }
         return OK;
     }
-    INLINE_RET recv_bytes(
-        const uint8_t mem_addr, const xfr_data_t &data) {
-        if (ESP_OK != i2c_master_receive(dev_handle,
-                          data.data_buffer, data.len, TIMEOUT)) {
+    INLINE_RET recv_bytes(const uint8_t mem_addr, const xfr_data_t &data) {
+        if (ESP_OK != i2c_master_receive(dev_handle, data.data_buffer,
+                          data.len, TIMEOUT)) {
             return ERROR;
         }
         return OK;
     }
-    INLINE_RET write_mem(
-        const uint8_t mem_addr, const xfr_data_t &data) {
+    INLINE_RET write_mem(const uint8_t mem_addr, const xfr_data_t &data) {
         uint32_t ret = 0;
 
-        ret = i2c_master_transmit(
-            dev_handle, &mem_addr, 1, TIMEOUT);
+        ret = i2c_master_transmit(dev_handle, &mem_addr, 1, TIMEOUT);
         if (ret != ESP_OK) {
             return ERROR;
         }
@@ -166,12 +160,10 @@ namespace i2c {
 
         return OK;
     }
-    INLINE_RET read_mem(
-        const uint8_t mem_addr, const xfr_data_t &data) {
+    INLINE_RET read_mem(const uint8_t mem_addr, const xfr_data_t &data) {
         uint32_t ret = 0;
 
-        ret = i2c_master_transmit(
-            dev_handle, &mem_addr, 1, TIMEOUT);
+        ret = i2c_master_transmit(dev_handle, &mem_addr, 1, TIMEOUT);
         if (ret != ESP_OK) {
             return ERROR;
         }
@@ -189,33 +181,51 @@ namespace i2c {
 
 namespace pwm {
 
+#define TIMER_GROUP_ID 0
+#define MAX_PWM_CH_NUM 5
+
     mcpwm_timer_handle_t timer_handle;
     struct phase_handle_t {
         mcpwm_oper_handle_t op_handle;
         mcpwm_cmpr_handle_t cmp_handle;
         mcpwm_gen_handle_t gen_handle;
     };
-    std::array<phase_handle_t, 3> phase_handle;
+    std::array<phase_handle_t, MAX_PWM_CH_NUM> phase_handle;
 
-    config_t config = {};
+    mcpwm_timer_config_t timer_config;
 
-    FUNC_RET init(const config_t &config) {
-        pwm::config = config;
-        // we use up and down mode to gen symmetric wave
+    uint8_t channel_nums=0;
+    float half_duty_coef=1.0f;// not sure weather is correct
 
-        // pwm timer init
-        mcpwm_timer_config_t pwm_config = {
-            .group_id      = 0,
+    // private helper functions
+    FUNC_RET assign_new_channel(uint8_t &ch) {
+        if(MAX_PWM_CH_NUM <= channel_nums+1){
+            return ERROR;
+        }
+        ch = ++channel_nums-1;
+        return OK;
+    }
+
+    FUNC_RET init_timer(const timer_config_t &config) {
+        timer_config = {
+            .group_id      = TIMER_GROUP_ID,
             .clk_src       = MCPWM_TIMER_CLK_SRC_DEFAULT,
             .resolution_hz = config.resolution_hz,
-            .count_mode    = MCPWM_TIMER_COUNT_MODE_UP_DOWN,
-            .period_ticks  = 2 * config.resolution_hz,
+            .count_mode    = (mcpwm_timer_count_mode_t)config.count_mode,
+            .period_ticks  = config.resolution_hz,
             .intr_priority = 0,
             .flags         = {.update_period_on_empty = 1},
         };
+
+        // !!!! this part should be verified from esp's document !!!!
+        if (config.count_mode==timer_config_t::UP_DOWN) {
+            half_duty_coef=0.5f;
+            timer_config.period_ticks*=2;
+        }
+
         mcpwm_timer_event_callbacks_t timer_callbacks;
-        if (ESP_OK !=
-            mcpwm_new_timer(&pwm_config, &timer_handle)) {
+
+        if (ESP_OK != mcpwm_new_timer(&timer_config, &timer_handle)) {
             return ERROR;
         }
         // no timer callbacks are used currently
@@ -225,72 +235,106 @@ namespace pwm {
         //     return ERROR;
         // }
 
-        // phase init
+        // enable timer but not start for now
+        if (ESP_OK != mcpwm_timer_enable(timer_handle)) {
+            return ERROR;
+        }
+        return OK;
+    }
+    FUNC_RET deinit();
+
+    FUNC_RET add_channel(const channel_config_t &config, uint8_t &ch) {
         mcpwm_operator_config_t operator_config = {
-            .group_id = pwm_config.group_id,
+            .group_id = TIMER_GROUP_ID,
         };
         mcpwm_comparator_config_t comparator_config = {
             .flags = {.update_cmp_on_tez = 1},
         };
-        mcpwm_generator_config_t generator_config;
-        for (uint8_t i = 0; i < PHASE_NUM; i++) {
-            if (ESP_OK !=
-                mcpwm_new_operator(&operator_config,
-                    &(phase_handle[i].op_handle))) { // oper init
-                return ERROR;
-            }
-            if (ESP_OK !=
-                mcpwm_new_comparator(phase_handle[i].op_handle,
-                    &comparator_config,
-                    &(phase_handle[i]
-                            .cmp_handle))) { // cmpr init
-                return ERROR;
-            }
-            generator_config.gen_gpio_num = config.pin_num[i];
-            if (ESP_OK !=
-                mcpwm_new_generator(phase_handle[i].op_handle,
-                    &generator_config,
-                    &(phase_handle[i].gen_handle))) { // gen init
-                return ERROR;
-            }
+        mcpwm_generator_config_t generator_config = {
+            .gen_gpio_num = config.pin_num,
+        };
 
-            // gen high level voltage in the middle
-            mcpwm_generator_set_action_on_compare_event(
-                phase_handle[i].gen_handle,
-                MCPWM_GEN_COMPARE_EVENT_ACTION(
-                    MCPWM_TIMER_DIRECTION_UP,
-                    phase_handle[i].cmp_handle,
-                    MCPWM_GEN_ACTION_HIGH));
-            mcpwm_generator_set_action_on_compare_event(
-                phase_handle[i].gen_handle,
-                MCPWM_GEN_COMPARE_EVENT_ACTION(
-                    MCPWM_TIMER_DIRECTION_DOWN,
-                    phase_handle[i].cmp_handle,
-                    MCPWM_GEN_ACTION_LOW));
-
-            if (ESP_OK !=
-                mcpwm_operator_connect_timer(
-                    phase_handle[i].op_handle,
-                    timer_handle)) { // op connect timer
-                return ERROR;
-            }
+        if (OK != assign_new_channel(ch)) {
+            return ERROR;
         }
 
-        // enable and start timer
-        mcpwm_timer_enable(timer_handle);
-        mcpwm_timer_start_stop(
-            timer_handle, MCPWM_TIMER_START_NO_STOP);
+        if (ESP_OK != mcpwm_new_operator(&operator_config,
+                          &(phase_handle[ch].op_handle))) { // oper init
+            return ERROR;
+        }
+        if (ESP_OK != mcpwm_new_comparator(phase_handle[ch].op_handle,
+                          &comparator_config,
+                          &(phase_handle[ch].cmp_handle))) { // cmpr init
+            return ERROR;
+        }
+        if (ESP_OK != mcpwm_new_generator(phase_handle[ch].op_handle,
+                          &generator_config,
+                          &(phase_handle[ch].gen_handle))) { // gen init
+            return ERROR;
+        }
+
+        mcpwm_generator_action_t gen_action;
+        switch (config.action_on_exceed) {
+        case channel_config_t::LOW:
+            gen_action = MCPWM_GEN_ACTION_LOW;
+            break;
+        case channel_config_t::HIGH:
+            gen_action = MCPWM_GEN_ACTION_HIGH;
+            break;
+        case channel_config_t::TOGGLE:
+            gen_action = MCPWM_GEN_ACTION_TOGGLE;
+            break;
+        case channel_config_t::KEEP:
+        default:
+            gen_action = MCPWM_GEN_ACTION_KEEP;
+            break;
+        }
+        if (timer_config.count_mode & 0x1) {
+            mcpwm_generator_set_action_on_compare_event(
+                phase_handle[ch].gen_handle,
+                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP,
+                    phase_handle[ch].cmp_handle, gen_action));
+        }
+        if (timer_config.count_mode & 0x2) {
+            mcpwm_generator_set_action_on_compare_event(
+                phase_handle[ch].gen_handle,
+                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN,
+                    phase_handle[ch].cmp_handle, gen_action));
+        }
+
+        if (ESP_OK !=
+            mcpwm_operator_connect_timer(phase_handle[ch].op_handle,
+                timer_handle)) { // op connect timer
+            return ERROR;
+        }
 
         return OK;
     }
 
-    FUNC_RET deinit();
+    FUNC_RET set_timer_state(timer_action_t action) {
+        mcpwm_timer_start_stop_cmd_t cmd = MCPWM_TIMER_STOP_EMPTY;
 
-    INLINE_RET apply_pwm_duty(uint8_t phase, float duty) {
+        switch (action) {
+        case START:
+            cmd = MCPWM_TIMER_START_STOP_EMPTY;
+            break;
+        case STOP:
+        default:
+            cmd = MCPWM_TIMER_STOP_EMPTY;
+            break;
+        }
+
+        if (ESP_OK != mcpwm_timer_start_stop(timer_handle, cmd)) {
+            return ERROR;
+        }
+        return OK;
+    }
+
+    INLINE_RET set_channel_duty(uint8_t channel, float duty) {
         if (ESP_OK !=
             mcpwm_comparator_set_compare_value(
-                phase_handle[phase].cmp_handle,
-                (uint32_t)(0.5f * duty * config.period_ticks))) {
+                phase_handle[channel].cmp_handle,
+                (uint32_t)(half_duty_coef * duty * timer_config.period_ticks))) {
             return ERROR;
         };
         return OK;
