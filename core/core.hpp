@@ -4,7 +4,7 @@
 
 // #include "algorithm.hpp"
 #include "devices/encoder/common.hpp"
-#include "devices/wave_gen//common.hpp"
+#include "devices/wave_gen/common.hpp"
 #include "platform/common.hpp"
 #include "utils/utils.hpp"
 

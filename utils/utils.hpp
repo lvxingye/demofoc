@@ -4,7 +4,7 @@
 
 // defines
 #define PI 3.14159265359f
-
+#define PHASE_NUM 3
 
 #define INLINE_RET inline ret_val_t
 #define FUNC_RET ret_val_t
