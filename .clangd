@@ -16,11 +16,7 @@ CompileFlags:
     
 Diagnostics:
   UnusedIncludes: None
-  # 工具链 cxxflags 里的 GCC 专用参数（如 -mlongcalls、-specs=...）经 @file
-  # 展开后 clang 不识别，压掉这类"未知参数"噪音；不影响代码自身的诊断。
   Suppress:
-    - "drv_unknown_argument_with_suggestion"
-    - "drv_unknown_argument"
     - "modernize-use-using"
   
 InlayHints:
