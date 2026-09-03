@@ -24,6 +24,8 @@ FUNC_RET mem_write_2bytes(uint8_t mem_addr, uint16_t &data) {
         uint16_t u16_data;
         std::array<uint8_t, 2> u8_data;
     } union_data;
+    union_data.u16_data = data;
+
     xfr_data_t _data = {
         .data_buffer = reinterpret_cast<uint8_t *>(&union_data.u8_data[1]),
         .len         = 1,

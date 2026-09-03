@@ -11,6 +11,7 @@
 #include "esp_err.h"
 
 // foc library header
+#include "esp_task_wdt.h"
 #include "hal/mcpwm_types.h"
 #include "platform/common.hpp"
 #include "soc/gpio_num.h"
@@ -364,8 +365,10 @@ namespace pwm {
 } // namespace pwm
 
 // initialize common peripherals like timers and buses
-FUNC_RET init_platform_driver(platform_config_t &config) {
+FUNC_RET pltf::init_platform_driver(platform_config_t &config) {
 
+    esp_task_wdt_deinit();
+    
     // initialization for gpio pins will be done by device driver
     // respectively
 

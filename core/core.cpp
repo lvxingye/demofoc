@@ -11,8 +11,8 @@ ret_val_t foc_t::init(void) {
     encoder.init();
     pwm_controller.init();
 
-    u_dc=10.0f;
-    configs.pole_pairs=7;
+    u_dc               = 10.0f;
+    configs.pole_pairs = 7;
     // todo: adc init
 
     return OK;
@@ -60,13 +60,12 @@ ret_val_t foc_t::loop(bool is_open_loop) {
     float angle                 = 0.0f;
     d_q_t target_d_q            = {.d = 0.0f, .q = 5.0f};
     alpha_beta_t alpha_beta_res = {.alpha = 0.0f, .beta = 0.0f};
-    abc_phase_t abc_phase_res   = {.a = 0.0f, .b = 0.0f, .c = 0.0f},
-                final_duty      = {.a = 0.0f, .b = 0.0f, .c = 0.0f};
+    abc_phase_t final_duty      = {.a = 0.0f, .b = 0.0f, .c = 0.0f};
 
-    angle = encoder.get_phy_angle()*configs.pole_pairs;
+    angle = encoder.get_phy_angle() * configs.pole_pairs;
 
     alpha_beta_res = transforms_t::inv_park_transform(target_d_q, angle);
-    if (0.0f == u_dc){
+    if (0.0f == u_dc) {
         return ERROR;
     }
     alpha_beta_res = alpha_beta_res * (1.0f / u_dc); // normalization
