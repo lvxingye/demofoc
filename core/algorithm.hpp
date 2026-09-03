@@ -30,8 +30,8 @@ public:
     static abc_phase_t svpwm(alpha_beta_t x, float theta = 0.0f);
 
 private:
-    static inline float min(float a, float b);
-    static inline float max(float a, float b);
+    inline float min(float a, float b);
+    inline float max(float a, float b);
 };
 
 class pid_controller_t {

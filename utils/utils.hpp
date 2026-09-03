@@ -27,6 +27,9 @@ struct alpha_beta_t
 {
     float alpha;
     float beta;
+
+    alpha_beta_t operator*(float s);
+    alpha_beta_t operator*(alpha_beta_t s);
 };
 struct d_q_t
 {
