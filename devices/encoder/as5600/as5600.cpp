@@ -60,8 +60,8 @@ inline float raw_to_rad(uint16_t raw_angle) {
 }
 
 // encoder init and deinitialization func
-encoder_t::encoder_t() {}
-encoder_t::~encoder_t() {};
+// encoder_t::encoder_t() {}
+// encoder_t::~encoder_t() {};
 
 FUNC_RET encoder_t::init() {
 
