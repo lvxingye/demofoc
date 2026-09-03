@@ -1,0 +1,37 @@
+# .clang-format — FOC 项目代码风格
+# 目标版本：clang-format 19 (esp-clang / ESP-IDF)
+BasedOnStyle: LLVM
+
+# ===== 缩进：4 空格 =====
+IndentWidth: 4                 # 每级缩进 4 空格
+ContinuationIndentWidth: 4     # 续行缩进 4 空格
+TabWidth: 4
+UseTab: Never                  # 一律用空格，不用 Tab
+AccessModifierOffset: -4       # public/private 相对成员少缩进 4（顶格）
+
+# ===== 行宽（关键取舍点，见说明）=====
+# 结构体临时量"换行写"由 ColumnLimit 触发；clang-format 没有"总是拆花括号列表"的选项。
+# 你的最长声明约 54 字符；示例 `controller.apply_phase_pwm({...});` 约 76 字符。
+#   60 → 声明保持单行；76 字符的结构体调用会把结构体整体移到下一行
+#  ≤55 → 结构体字段逐个换行（但 ≤52 时 54 字符的声明也会被折行）
+#    0 → 永不折行、声明恒单行，但结构体保持内联
+ColumnLimit: 75
+
+# ===== 函数声明保持单行 =====
+AlwaysBreakTemplateDeclarations: false      # 模板声明不把 template<...> 拆到独立行                           
+AlwaysBreakAfterReturnType: None            # 不在返回类型之后强制换行
+BinPackParameters: true                     # 参数紧凑排列，不拆行
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackArguments: true
+
+# ===== 花括号列表（结构体临时量）换行风格 =====
+Cpp11BracedListStyle: true       # 花括号列表换行时一元素一行
+AlignAfterOpenBracket: DontAlign # 续行不对齐左括号，改用 ContinuationIndentWidth
+
+# ===== 等号对齐 =====
+AlignConsecutiveAssignments: true   # 连续赋值语句的 = 对齐
+
+NamespaceIndentation: All
+
+
+BreakBeforeBraces: Attach  # 或 Attach, 根据你期望的括号位置选择
