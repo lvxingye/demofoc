@@ -1,19 +1,25 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 
 #include "utils/utils.hpp"
 
-class wave_gen_controller_t {
+#define PHASE_NUM 3
+
+class pwm_controller_t {
 public:
-    wave_gen_controller_t();
-    ~wave_gen_controller_t();
+    pwm_controller_t();
+    ~pwm_controller_t();
 
     FUNC_RET init();
 
-    INLINE_RET apply_pwm_for_phases(const abc_phase_t &phase); // return radius
+    FUNC_RET apply_pwm_for_phases(const abc_phase_t &phase); // return radius
 
 private:
     uint8_t is_initialized = false;
+
+    std::array<uint8_t, 3>phases;
+    std::array<uint8_t, 4>pins={25,26,27,33};//phase a,b,c; en
 };
