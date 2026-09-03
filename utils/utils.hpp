@@ -11,7 +11,7 @@
 
 #define RETURN_ON_ERR(x) return (!(ret_val_t)(x) ? OK : ERROR)
 
-using ret_val_t = enum : std::uint8_t { OK = 0, ERROR };
+enum ret_val_t: std::uint8_t {OK = 0, ERROR};
 
 struct xfr_data_t {
     uint8_t *data_buffer;
