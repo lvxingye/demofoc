@@ -12,7 +12,7 @@ public:
 
     FUNC_RET init();
 
-    inline float get_phy_angle(); // return radius
+    float get_phy_angle(); // return radius
 
 private:
     uint8_t is_initialized = false;
