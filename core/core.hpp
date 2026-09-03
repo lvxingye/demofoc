@@ -8,7 +8,7 @@
 #include "platform/common.hpp"
 #include "utils/utils.hpp"
 
-class foc
+class foc_t
 {
 public:
   struct configs_t
@@ -21,11 +21,13 @@ public:
 
   // todo: pid controller
   // todo: close loop logic something
-  foc ();
-  ~foc ();
+  foc_t ()=default;
+  ~foc_t ()=default;
+
+  ret_val_t init();
 
   ret_val_t test_correct_phase ();
-  ret_val_t loop (bool);
+  ret_val_t loop (bool is_open_loop = true);
 
 private:
   float u_dc = 0.0f;
@@ -33,7 +35,7 @@ private:
   configs_t configs;
 
   encoder_t encoder;
-  current_sensor_t current_sensor;
-  wave_gen_controller_t controller;
+//   current_sensor_t current_sensor;
+  pwm_controller_t pwm_controller;
 
 };
