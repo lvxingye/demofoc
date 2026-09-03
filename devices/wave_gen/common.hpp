@@ -10,16 +10,17 @@
 
 class pwm_controller_t {
 public:
-    pwm_controller_t();
-    ~pwm_controller_t();
+    pwm_controller_t()  = default;
+    ~pwm_controller_t() = default;
 
     FUNC_RET init();
 
-    FUNC_RET apply_pwm_for_phases(const abc_phase_t &phase); // return radius
+    FUNC_RET apply_pwm_for_phases(
+        const abc_phase_t &phase); // return radius
 
 private:
     uint8_t is_initialized = false;
 
-    std::array<uint8_t, 3>phases;
-    std::array<uint8_t, 4>pins={25,26,27,33};//phase a,b,c; en
+    std::array<uint8_t, 3> phases;
+    std::array<uint8_t, 4> pins = {25, 26, 27, 33}; // phase a,b,c; en
 };

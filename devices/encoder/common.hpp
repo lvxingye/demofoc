@@ -7,8 +7,8 @@
 
 class encoder_t {
 public:
-    encoder_t();
-    ~encoder_t();
+    encoder_t()  = default;
+    ~encoder_t() = default;
 
     FUNC_RET init();
 
