@@ -8,13 +8,12 @@
 #include "driver/mcpwm_oper.h"
 #include "driver/mcpwm_timer.h"
 #include "driver/mcpwm_types.h"
+// #include "hal/mcpwm_types.h"
+#include "esp_task_wdt.h"
 #include "esp_err.h"
 
 // foc library header
-#include "esp_task_wdt.h"
-#include "hal/mcpwm_types.h"
 #include "platform/common.hpp"
-#include "soc/gpio_num.h"
 #include "utils/utils.hpp"
 
 #include <array>
