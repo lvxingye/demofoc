@@ -1,8 +1,5 @@
-idf_component_register(
-    SRCS ${FOC_LIBRARY_ROOT}/core/core.cpp
-    INCLUDE_DIRS 
-)
+# idf_component_register()
 
-add_subdirectory(${FOC_LIBRARY_ROOT}/libfoc)
+# add_subdirectory(${PROJECT_ROOT}/components/libfoc)
 
-target_link_libraries(main PRIVATE libfoc)
+# target_link_libraries(main PRIVATE libfoc)
