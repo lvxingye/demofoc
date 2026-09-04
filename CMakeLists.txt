@@ -11,5 +11,3 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 # include(/home/lvxy/.espressif/v6.0.2/esp-idf/tools/cmake/project.cmake)
 
 project(foc_esp32)
-
-include(${PROJECT_ROOT}/cmake/libfoc.cmake)
