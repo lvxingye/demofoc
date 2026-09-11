@@ -14,7 +14,7 @@ add_library(foc-device STATIC
     ${FOC_LIBRARY_ROOT}/devices/wave_gen/onchip/onchip.cpp
 )
 target_include_directories(foc-device PRIVATE ${FOC_LIBRARY_ROOT})
-target_link_libraries(foc-device PRIVATE platform)
+target_link_libraries(foc-device PRIVATE driver)
 
 # core algorithm library
 add_library(foc-core STATIC
@@ -29,6 +29,6 @@ target_include_directories(foc-device PUBLIC ${FOC_LIBRARY_ROOT})
 target_link_libraries(foc INTERFACE
     foc-core
     foc-device
-    platform
+    driver
 )
 
