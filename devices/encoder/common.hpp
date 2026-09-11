@@ -12,8 +12,11 @@ public:
 
     FUNC_RET init();
 
-    float get_phy_angle(); // return radius
+    float get_phy_angle(bool is_enable_filter=false); // return radius
+    void zero_align();
 
 private:
     uint8_t is_initialized = false;
+
+    float zero_bias = 0.0f;
 };

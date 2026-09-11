@@ -3,7 +3,7 @@
 #include <cstdint>
 
 // defines
-#define PI 3.14159265359f
+#define PI std::numbers::pi
 #define PHASE_NUM 3
 
 #define INLINE_RET inline ret_val_t

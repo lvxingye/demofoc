@@ -8,17 +8,22 @@
 #include "driver/mcpwm_oper.h"
 #include "driver/mcpwm_timer.h"
 #include "driver/mcpwm_types.h"
+// #include "hal/mcpwm_types.h"
 #include "esp_err.h"
+#include "esp_log.h"
+#include "esp_task_wdt.h"
 
 // foc library header
-#include "esp_task_wdt.h"
-#include "hal/mcpwm_types.h"
+#include "lwip/err.h"
 #include "platform/common.hpp"
-#include "soc/gpio_num.h"
 #include "utils/utils.hpp"
 
 #include <array>
 #include <cstdint>
+#include <cstdio>
+// #include <cstdio>
+#include <cstring>
+#include <string>
 
 namespace gpio {
 
@@ -81,7 +86,7 @@ namespace i2c {
     // assume only one device and only one bus would be used
     // here. so call functions init_dev and init_bus, not
     // add_device and add_bus
-#define TIMEOUT 1
+#define TIMEOUT 10000
 #define IS_10BIT_ADDR(x)                                                  \
     (((x) >> 8) ? I2C_ADDR_BIT_LEN_10 : I2C_ADDR_BIT_LEN_7)
 
@@ -93,16 +98,19 @@ namespace i2c {
 
     // init and deinit functions
     FUNC_RET init_bus(const bus_config_t &config) {
+        esp_err_t driver_ret                   = ESP_OK;
         i2c_master_bus_config_t i2c_bus_config = {
             .i2c_port          = -1,
             .sda_io_num        = (gpio_num_t)config.sda_pin_num,
             .scl_io_num        = (gpio_num_t)config.scl_pin_num,
             .clk_source        = I2C_CLK_SRC_DEFAULT,
             .glitch_ignore_cnt = 7,
-            .flags             = {.enable_internal_pullup = true},
+            .flags             = {.enable_internal_pullup = false},
         };
 
-        if (ESP_OK != i2c_new_master_bus(&i2c_bus_config, &bus_handle)) {
+        driver_ret = i2c_new_master_bus(&i2c_bus_config, &bus_handle);
+        if (ESP_OK != driver_ret) {
+            ESP_LOGE("paltf::i2c::init_bus", "init error");
             return ERROR;
         }
         is_bus_initialized = true;
@@ -114,6 +122,8 @@ namespace i2c {
     FUNC_RET deinit_bus() { return OK; }
 
     FUNC_RET init_dev(const dev_config_t &config) {
+        esp_err_t driver_ret = ESP_OK;
+
         if (!is_bus_initialized) {
             return ERROR;
         }
@@ -123,8 +133,10 @@ namespace i2c {
             .device_address  = config.dev_addr,
             .scl_speed_hz    = config.scl_speed_hz,
         };
-        if (ESP_OK != i2c_master_bus_add_device(
-                          bus_handle, &_dev_config, &dev_handle)) {
+        driver_ret = i2c_master_bus_add_device(
+            bus_handle, &_dev_config, &dev_handle);
+        if (ESP_OK != driver_ret) {
+            ESP_LOGE("paltf::i2c::init_dev", "init error");
             return ERROR;
         }
         return OK;
@@ -136,15 +148,20 @@ namespace i2c {
     // data transfer functions
     // wrapper functions for platform iic bus send data
     FUNC_RET send_bytes(const uint8_t mem_addr, const xfr_data_t &data) {
-        if (ESP_OK != i2c_master_transmit(dev_handle, data.data_buffer,
-                          data.len, TIMEOUT)) {
+        esp_err_t driver_ret = i2c_master_transmit(
+            dev_handle, data.data_buffer, data.len, TIMEOUT);
+
+        if (ESP_OK != driver_ret) {
+            ESP_LOGE("paltf::i2c::send_bytes", "send error");
             return ERROR;
         }
         return OK;
     }
     FUNC_RET recv_bytes(const uint8_t mem_addr, const xfr_data_t &data) {
-        if (ESP_OK != i2c_master_receive(dev_handle, data.data_buffer,
-                          data.len, TIMEOUT)) {
+        esp_err_t driver_ret = i2c_master_receive(
+            dev_handle, data.data_buffer, data.len, TIMEOUT);
+        if (ESP_OK != driver_ret) {
+            ESP_LOGE("paltf::i2c::recv_bytes", "recv error");
             return ERROR;
         }
         return OK;
@@ -154,11 +171,13 @@ namespace i2c {
 
         ret = i2c_master_transmit(dev_handle, &mem_addr, 1, TIMEOUT);
         if (ret != ESP_OK) {
+            ESP_LOGE("paltf::i2c::write_mem", "write error");
             return ERROR;
         }
         ret = i2c_master_transmit(
             dev_handle, data.data_buffer, data.len, TIMEOUT);
         if (ret != ESP_OK) {
+            ESP_LOGE("paltf::i2c::write_mem", "write error");
             return ERROR;
         }
 
@@ -169,13 +188,18 @@ namespace i2c {
 
         ret = i2c_master_transmit(dev_handle, &mem_addr, 1, TIMEOUT);
         if (ret != ESP_OK) {
+            ESP_LOGE("paltf::i2c::read_mem", "read error");
+            // std::string str(mem_addr);
+            // ESP_LOGE("paltf::i2c::read_mem",str.c_str())
             return ERROR;
         }
         ret = i2c_master_receive(
             dev_handle, data.data_buffer, data.len, TIMEOUT);
         if (ret != ESP_OK) {
+            ESP_LOGE("paltf::i2c::read_mem", "read error");
             return ERROR;
         }
+            // printf("get mem addr: 0x%02X \nget data:0x%02X\n",mem_addr,(uint8_t)*(data.data_buffer));
 
         return OK;
     }
@@ -368,7 +392,7 @@ namespace pwm {
 FUNC_RET pltf::init_platform_driver(platform_config_t &config) {
 
     esp_task_wdt_deinit();
-    
+
     // initialization for gpio pins will be done by device driver
     // respectively
 
@@ -389,6 +413,14 @@ FUNC_RET pltf::init_platform_driver(platform_config_t &config) {
         return ERROR;
     }
 
+    gpio::config_t led_config = {
+        .pin_bit_mask = (uint64_t)(1) << 2,
+        .mode         = gpio::config_t::OUT,
+        .pull_up_en   = 0,
+        .pull_down_en = 0,
+        .intr_type    = gpio::config_t::DISABLE,
+    };
+    gpio::init(led_config);
     // spi bus initialization, if used
 
     // uart initialization

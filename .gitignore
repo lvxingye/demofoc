@@ -4,3 +4,9 @@
 
 # build dir
 build/
+
+.vscode/
+
+todo.md
+
+.claude/
