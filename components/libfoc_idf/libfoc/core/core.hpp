@@ -14,7 +14,7 @@ public:
   struct configs_t
   {
     float u_dc;
-    uint8_t pole_pairs;
+    float pole_pairs;
     uint8_t is_swapped = 0; // weather the actual phase is reversed
                             // and weather b and c phase has been swapped
   };
@@ -29,7 +29,7 @@ public:
   ret_val_t test_correct_phase ();
   ret_val_t loop (bool is_open_loop = true);
 
-private:
+// private:
   float u_dc = 0.0f;
 
   configs_t configs;

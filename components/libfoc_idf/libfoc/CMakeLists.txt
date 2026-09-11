@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
+add_compile_options(-Wno-missing-field-initializers)
+
 # set library relative variables
 set(FOC_LIBRARY_ROOT ${CMAKE_CURRENT_LIST_DIR})
 
@@ -19,7 +21,7 @@ add_library(libfoc_core STATIC
     ${FOC_LIBRARY_ROOT}/core/core.cpp
     ${FOC_LIBRARY_ROOT}/core/algorithm.cpp
 )
-target_include_directories(libfoc_dev PRIVATE ${FOC_LIBRARY_ROOT})
+target_include_directories(libfoc_core PRIVATE ${FOC_LIBRARY_ROOT})
 target_link_libraries(libfoc_core PRIVATE libfoc_dev)
 
 add_library(libfoc INTERFACE)

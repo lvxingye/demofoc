@@ -4,6 +4,8 @@
 #include "platform/common.hpp"
 #include "utils/utils.hpp"
 #include <cstdint>
+#include <cstdio>
+#include <utility>
 // inline namespace onchip {
 
 #define USE_PWM_EN_PIN // may move to config later?
@@ -33,6 +35,7 @@ FUNC_RET pwm_controller_t::init() {
 }
 FUNC_RET pwm_controller_t::apply_pwm_for_phases(
     const abc_phase_t &phase) {
+    printf("%f,%f,%f\n",phase.a,phase.b,phase.c);
 
     pwm::set_channel_duty(phases[0], phase.a);
     pwm::set_channel_duty(phases[1], phase.b);
@@ -40,4 +43,9 @@ FUNC_RET pwm_controller_t::apply_pwm_for_phases(
 
     return OK;
 }
+
+    FUNC_RET pwm_controller_t::reverse_phase_order(){
+        std::swap(phases[1],phases[2]);
+        return OK;
+    }
 // }

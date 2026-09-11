@@ -15,8 +15,9 @@ public:
 
     FUNC_RET init();
 
-    FUNC_RET apply_pwm_for_phases(
-        const abc_phase_t &phase); // return radius
+    // return radius
+    FUNC_RET apply_pwm_for_phases(const abc_phase_t &phase);
+    FUNC_RET reverse_phase_order();
 
 private:
     uint8_t is_initialized = false;
