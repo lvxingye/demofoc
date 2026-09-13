@@ -74,10 +74,8 @@ inline namespace pltf {
         // wrapper functions for platform iic bus receive data
         FUNC_RET recv_bytes(
             const uint8_t mem_addr, const xfr_data_t &data);
-        FUNC_RET write_mem(
-            const uint8_t mem_addr, const xfr_data_t &data);
-        FUNC_RET read_mem(
-            const uint8_t mem_addr, const xfr_data_t &data);
+        FUNC_RET write_mem(const uint8_t mem_addr, const xfr_data_t &data);
+        FUNC_RET read_mem(const uint8_t mem_addr, const xfr_data_t &data);
 
     } // namespace i2c
 
@@ -116,10 +114,19 @@ inline namespace pltf {
     } // namespace pwm
 
     namespace adc {
-        FUNC_RET init();
+
+        struct adc_res_t {
+            uint8_t ch;
+            uint16_t data;
+        };
+
+        FUNC_RET add_channel(uint8_t &ch);
         FUNC_RET deinit();
 
-        abc_phase_t get_phase_current();
+        FUNC_RET get_channel_votage(
+            uint8_t ch, std::array<adc_res_t, 5> &data);
+
+        void calibration(uint8_t &ch);
 
         // private:
     } // namespace adc

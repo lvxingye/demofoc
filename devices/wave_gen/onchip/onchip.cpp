@@ -1,5 +1,5 @@
 
-#include "devices/wave_gen/common.hpp"
+#include "../common.hpp"
 
 #include "platform/common.hpp"
 #include "utils/utils.hpp"
@@ -35,7 +35,7 @@ FUNC_RET pwm_controller_t::init() {
 }
 FUNC_RET pwm_controller_t::apply_pwm_for_phases(
     const abc_phase_t &phase) {
-    printf("%f,%f,%f\n",phase.a,phase.b,phase.c);
+    printf("%f,%f,%f,",phase.a,phase.b,phase.c);
 
     pwm::set_channel_duty(phases[0], phase.a);
     pwm::set_channel_duty(phases[1], phase.b);

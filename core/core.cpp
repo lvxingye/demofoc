@@ -2,20 +2,31 @@
 #include "algorithm.hpp"
 #include "platform/common.hpp"
 #include "utils/utils.hpp"
+#include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <numbers>
 #include <unistd.h>
 
 #include <cstddef>
 
+// debuging only!!
+float raw_to_current(float raw) {
+    // clang-format off
+    return (raw / 4096.0f * 3.3f - 1870.0f / 4096.0f * 3.3f) / 50.0f / 0.01f;
+    // clang-format on
+}
 // foc class
 ret_val_t foc_t::init(void) {
+    uint8_t ch = 0;
+
     platform_config_t config = {};
     pltf::init_platform_driver(config);
 
     encoder.init();
     pwm_controller.init();
+    adc::add_channel(ch);
 
     u_dc               = 1.0f;
     configs.pole_pairs = 7.0f;
@@ -87,14 +98,15 @@ ret_val_t foc_t::loop(bool is_open_loop) {
     d_q_t target_d_q            = {.d = 0.0f, .q = 0.0f};
     alpha_beta_t alpha_beta_res = {.alpha = 0.0f, .beta = 0.0f};
     abc_phase_t final_duty      = {.a = 0.0f, .b = 0.0f, .c = 0.0f};
+    std::array<adc::adc_res_t, 5> _adc_data = {};
 
-    angle = encoder.get_phy_angle(true) ;
+    angle = encoder.get_phy_angle(true);
 
-    target_d_q.q=-(angle-PI)/PI*0.2f;
+    target_d_q.q = -(angle - PI) / PI * 0.2f;
     // printf("%f,",angle-PI);
 
-    alpha_beta_res =
-        transforms_t::inv_park_transform(target_d_q, angle* configs.pole_pairs );
+    alpha_beta_res = transforms_t::inv_park_transform(
+        target_d_q, angle * configs.pole_pairs);
     if (0.0f == u_dc) {
         return ERROR;
     }
@@ -102,6 +114,12 @@ ret_val_t foc_t::loop(bool is_open_loop) {
     final_duty     = transforms_t::svpwm(alpha_beta_res);
 
     pwm_controller.apply_pwm_for_phases(final_duty);
+
+    adc::get_channel_votage(0, _adc_data);
+
+    float ia = raw_to_current(_adc_data[0].data),
+          ib = raw_to_current(_adc_data[1].data), ic = -ia - ib;
+    printf("%f,%f,%f", ia, ib, ic);
 
     if (!is_open_loop) {
         // todo: timer sync, current read
@@ -112,6 +130,7 @@ ret_val_t foc_t::loop(bool is_open_loop) {
 
         // todo: pid controller
     }
+    printf("\n");
 
     return OK;
 }

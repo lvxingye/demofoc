@@ -9,7 +9,7 @@
 #include "reg.hpp"
 
 // common encoder device header include
-#include "devices/encoder/common.hpp"
+#include "../common.hpp"
 
 // platform driver
 #include "platform/common.hpp"
@@ -140,7 +140,7 @@ float encoder_t::get_phy_angle(bool is_enable_filter) {
             }
         }
     }
-    printf("%f,%f,%f,", angle, last_read[0], last_read[1]);
+    // printf("%f,%f,%f,", angle, last_read[0], last_read[1]);
     last_read[1] = last_read[0];
     last_read[0] = angle;
     return angle;

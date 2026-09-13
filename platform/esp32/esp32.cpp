@@ -8,17 +8,22 @@
 #include "driver/mcpwm_oper.h"
 #include "driver/mcpwm_timer.h"
 #include "driver/mcpwm_types.h"
+
+#include "esp_adc/adc_continuous.h"
+
 // #include "hal/mcpwm_types.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_task_wdt.h"
 
 // foc library header
-#include "lwip/err.h"
+#include "esp32.hpp"
+#include "hal/adc_types.h"
 #include "platform/common.hpp"
 #include "utils/utils.hpp"
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 // #include <cstdio>
@@ -199,7 +204,8 @@ namespace i2c {
             ESP_LOGE("paltf::i2c::read_mem", "read error");
             return ERROR;
         }
-            // printf("get mem addr: 0x%02X \nget data:0x%02X\n",mem_addr,(uint8_t)*(data.data_buffer));
+        // printf("get mem addr: 0x%02X \nget
+        // data:0x%02X\n",mem_addr,(uint8_t)*(data.data_buffer));
 
         return OK;
     }
@@ -388,6 +394,99 @@ namespace pwm {
     }
 } // namespace pwm
 
+// work in progress
+// and haven't done much abstract yet!!!
+// APIs are under testing and learning!!!
+namespace adc {
+    static adc_continuous_evt_data_t adc_raw_buffer = {};
+    adc_continuous_handle_t adc_handle;
+    uint8_t adc_channels_used = 0;
+
+    static bool IRAM_ATTR _on_conv_done(adc_continuous_handle_t handle,
+        const adc_continuous_evt_data_t *edata, void *user_data) {
+        // printf("isr");
+        // todo: lock acquire 
+        std::memcpy(&adc_raw_buffer, edata,
+            sizeof(adc_continuous_evt_data_t)); // copy adc buffer
+        // todo: lock release
+
+        return true;
+    }
+    FUNC_RET add_channel(uint8_t &ch) {
+
+        if (MAX_ADC_CHANNEL <= adc_channels_used) {
+            return ERROR;
+        }
+
+        // shall not cache data for too long ?
+        adc_continuous_handle_cfg_t adc_handle_config = {
+            .max_store_buf_size =
+                SOC_ADC_DIGI_DATA_BYTES_PER_CONV * 4, // double buffer
+            .conv_frame_size = SOC_ADC_DIGI_DATA_BYTES_PER_CONV * 2,
+            .flags           = {.flush_pool = 1},
+        };
+        ESP_ERROR_CHECK(
+            adc_continuous_new_handle(&adc_handle_config, &adc_handle));
+
+        std::array<adc_digi_pattern_config_t, 2> adc_pattern = {};
+        adc_pattern[0]                                       = {
+            .atten     = ADC_ATTEN_DB_12,
+            .channel   = ADC_CHANNEL_0, // sensor vp
+            .unit      = ADC_UNIT_1,
+            .bit_width = SOC_ADC_DIGI_MAX_BITWIDTH,
+        };
+        adc_pattern[1] = {
+            .atten     = ADC_ATTEN_DB_12,
+            .channel   = ADC_CHANNEL_3, // sensor vn
+            .unit      = ADC_UNIT_1,
+            .bit_width = SOC_ADC_DIGI_MAX_BITWIDTH,
+        };
+        // for debug !!!
+        adc_continuous_config_t adc_config = {
+            .pattern_num    = 2,
+            .adc_pattern    = adc_pattern.data(),
+            .sample_freq_hz = 40000,
+            .conv_mode      = ADC_CONV_SINGLE_UNIT_1,
+        };
+        adc_continuous_config(adc_handle, &adc_config);
+
+        adc_continuous_evt_cbs_t adc_callbacks = {
+            .on_conv_done = _on_conv_done,
+            .on_pool_ovf  = nullptr,
+        };
+        adc_continuous_register_event_callbacks(
+            adc_handle, &adc_callbacks, nullptr);
+
+        adc_continuous_start(adc_handle);
+
+        ch = adc_channels_used++;
+        return OK;
+    }
+    FUNC_RET deinit(uint8_t ch) {
+        if (ch >= adc_channels_used) {
+            return ERROR;
+        }
+        ESP_ERROR_CHECK(adc_continuous_deinit(adc_handle));
+        return OK;
+    }
+
+    FUNC_RET get_channel_votage(uint8_t ch,std::array<adc_res_t,5> &data) {
+        std::array<adc_continuous_data_t,5> parsed={};
+        uint32_t samples;
+        adc_continuous_parse_data(adc_handle,
+            adc_raw_buffer.conv_frame_buffer, adc_raw_buffer.size, parsed.data(),
+            &samples);
+        for (uint8_t i=0;i<5;i++){
+            data[i].ch=parsed[i].channel;
+            data[i].data=parsed[i].raw_data;
+        }
+        return OK;
+    }
+
+    void calibration(uint8_t &ch) {}
+
+} // namespace adc
+
 // initialize common peripherals like timers and buses
 FUNC_RET pltf::init_platform_driver(platform_config_t &config) {
 
@@ -397,8 +496,8 @@ FUNC_RET pltf::init_platform_driver(platform_config_t &config) {
     // respectively
 
     i2c::bus_config_t i2c_bus_config = {
-        .sda_pin_num = GPIO_NUM_21,
-        .scl_pin_num = GPIO_NUM_22,
+        .sda_pin_num = GPIO_NUM_19,
+        .scl_pin_num = GPIO_NUM_18,
     };
     if (ret_val_t::OK != i2c::init_bus(i2c_bus_config)) {
         return ERROR;
