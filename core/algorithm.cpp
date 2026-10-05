@@ -6,10 +6,10 @@
 
 // abc_phase_t struct
 alpha_beta_t alpha_beta_t::operator*(float s) {
-    return {.alpha=alpha*s,.beta=beta*s};
+    return {.alpha = alpha * s, .beta = beta * s};
 }
 alpha_beta_t alpha_beta_t::operator*(alpha_beta_t s) {
-    return {.alpha=alpha*s.alpha,.beta=beta*s.beta};
+    return {.alpha = alpha * s.alpha, .beta = beta * s.beta};
 }
 
 // abc_phase_t struct
@@ -32,12 +32,8 @@ abc_phase_t abc_phase_t::operator*(abc_phase_t s) {
 // transforms_t::~transforms_t()=default;
 
 // private helpers
-inline float transforms_t::min(float a, float b) {
-    return (a < b) ? a : b;
-}
-inline float transforms_t::max(float a, float b) {
-    return (a > b) ? a : b;
-}
+inline float transforms::min(float a, float b) { return (a < b) ? a : b; }
+inline float transforms::max(float a, float b) { return (a > b) ? a : b; }
 
 // public apis
 /**
@@ -46,7 +42,7 @@ inline float transforms_t::max(float a, float b) {
  * @param theta Electrical angle [rad].
  * @return Output in the rotating d-q frame.
  */
-d_q_t transforms_t::park_transform(alpha_beta_t x, float theta) {
+d_q_t transforms::park(alpha_beta_t x, float theta) {
     d_q_t y = {.d = 0.0f, .q = 0.0f};
     y.d     = x.alpha * cosf(theta) + x.beta * sinf(theta);
     y.q     = -x.alpha * sinf(theta) + x.beta * cosf(theta);
@@ -59,7 +55,7 @@ d_q_t transforms_t::park_transform(alpha_beta_t x, float theta) {
  * @param theta Electrical angle [rad].
  * @return Output in the stationary alpha-beta frame.
  */
-alpha_beta_t transforms_t::inv_park_transform(d_q_t x, float theta) {
+alpha_beta_t transforms::inv_park(d_q_t x, float theta) {
     alpha_beta_t y = {.alpha = 0.0f, .beta = 0.0f};
     y.alpha        = x.d * cosf(theta) - x.q * sinf(theta);
     y.beta         = x.d * sinf(theta) + x.q * cosf(theta);
@@ -72,7 +68,7 @@ alpha_beta_t transforms_t::inv_park_transform(d_q_t x, float theta) {
  * @param x Input three-phase quantities.
  * @return Output in the alpha-beta frame.
  */
-alpha_beta_t transforms_t::clark_transform(abc_phase_t x) {
+alpha_beta_t transforms::clark(abc_phase_t x) {
     alpha_beta_t y = {.alpha = 0.0f, .beta = 0.0f};
     y.alpha        = x.a - 0.5f * x.b - 0.5f * x.c;
     y.beta =
@@ -86,7 +82,7 @@ alpha_beta_t transforms_t::clark_transform(abc_phase_t x) {
  * @param x Input in the alpha-beta frame.
  * @return Output three-phase quantities.
  */
-abc_phase_t transforms_t::inv_clark_transform(alpha_beta_t x) {
+abc_phase_t transforms::inv_clark(alpha_beta_t x) {
     abc_phase_t y = {.a = 0.0f, .b = 0.0f, .c = 0.0f};
 
     // but why should I multiply 3/2 for each
@@ -110,12 +106,12 @@ abc_phase_t transforms_t::inv_clark_transform(alpha_beta_t x) {
  * @param theta Electrical angle [rad] (unused in this implementation).
  * @return Centered three-phase duty cycles in the [0, 1] range.
  */
-abc_phase_t transforms_t::svpwm(alpha_beta_t x, float theta) {
+abc_phase_t transforms::svpwm(alpha_beta_t x, float theta) {
     abc_phase_t y = {.a = 0.0f, .b = 0.0f, .c = 0.0f};
     float _min = 0.0f, _max = 0.0f, _center;
     // todo/optional:7 segment method segmentation
 
-    y       = inv_clark_transform(x);
+    y       = inv_clark(x);
     _min    = min(y.a, min(y.b, y.c));
     _max    = max(y.a, max(y.b, y.c));
     _center = 0.5f - (_min + _max) * 0.5f;
@@ -126,8 +122,14 @@ abc_phase_t transforms_t::svpwm(alpha_beta_t x, float theta) {
 }
 
 // pid controller
-pid_controller_t::pid_controller_t(coef_t &coef, float sample_peroid)
+pid_controller_t::pid_controller_t(float sample_peroid, const coef_t &coef)
     : coef(coef), sample_freq(1.0f / sample_peroid) {}
+
+/**
+ * @brief Update the PID coefficients.
+ * @param coef New kp/ki/kd coefficients.
+ */
+void pid_controller_t::set_coef(const coef_t &coef) { this->coef = coef; }
 
 /**
  * @brief Compute the PID output for a single sample.
