@@ -11,10 +11,12 @@
 
 #include <cstddef>
 
+pid_controller_t current(1000.0f, {0.15f,0.01f,0.01f});
+
 // debuging only!!
 float raw_to_current(float raw) {
     // clang-format off
-    return (raw / 4096.0f * 3.3f - 1870.0f / 4096.0f * 3.3f) / 50.0f / 0.01f;
+    return (raw / 4096.0f * 3.3f - 1849.5f / 4096.0f * 3.3f) / 50.0f / 0.01f;
     // clang-format on
 }
 // foc class
@@ -52,9 +54,8 @@ ret_val_t foc_t::test_correct_phase() {
     // swipe from 0-60deg(electrical angle)
     for (float ele_angle = 0.0f; ele_angle <= std::numbers::pi;
         ele_angle += std::numbers::pi / 30.0f) {
-        alpha_beta_res =
-            transforms_t::inv_park_transform(target_d_q, ele_angle);
-        final_duty = transforms_t::svpwm(alpha_beta_res);
+        alpha_beta_res = transforms::inv_park(target_d_q, ele_angle);
+        final_duty     = transforms::svpwm(alpha_beta_res);
         pwm_controller.apply_pwm_for_phases(final_duty);
         usleep(static_cast<useconds_t>(100 * 1000));
 
@@ -70,6 +71,7 @@ ret_val_t foc_t::test_correct_phase() {
             current_read -= 2.0f * std::numbers::pi;
         }
         last_read = current_read;
+        printf("\n");
     }
     d_shaft_angle = last_read - shaft_angle_0;
     printf("d angle: %0.3f~%0.3f\n", shaft_angle_0, last_read);
@@ -94,40 +96,53 @@ ret_val_t foc_t::test_correct_phase() {
 }
 
 ret_val_t foc_t::loop(bool is_open_loop) {
+    static d_q_t want_d_q       = {.d = 0.0f, .q = 0.2f};
+    static d_q_t target_d_q     = {.d = 0.0f, .q = 0.0f};
     float angle                 = 0.0f;
-    d_q_t target_d_q            = {.d = 0.0f, .q = 0.0f};
     alpha_beta_t alpha_beta_res = {.alpha = 0.0f, .beta = 0.0f};
     abc_phase_t final_duty      = {.a = 0.0f, .b = 0.0f, .c = 0.0f};
-    std::array<adc::adc_res_t, 5> _adc_data = {};
 
     angle = encoder.get_phy_angle(true);
 
-    target_d_q.q = -(angle - PI) / PI * 0.2f;
+    // target_d_q.q = -(angle - PI) / PI * 0.2f;
     // printf("%f,",angle-PI);
 
-    alpha_beta_res = transforms_t::inv_park_transform(
-        target_d_q, angle * configs.pole_pairs);
+    alpha_beta_res =
+        transforms::inv_park(target_d_q, angle * configs.pole_pairs);
     if (0.0f == u_dc) {
         return ERROR;
     }
     alpha_beta_res = alpha_beta_res * (1.0f / u_dc); // normalization
-    final_duty     = transforms_t::svpwm(alpha_beta_res);
+    final_duty     = transforms::svpwm(alpha_beta_res);
 
     pwm_controller.apply_pwm_for_phases(final_duty);
 
-    adc::get_channel_votage(0, _adc_data);
-
-    float ia = raw_to_current(_adc_data[0].data),
-          ib = raw_to_current(_adc_data[1].data), ic = -ia - ib;
-    printf("%f,%f,%f", ia, ib, ic);
-
     if (!is_open_loop) {
+        std::array<adc::adc_res_t, 5> _adc_data = {};
+        adc::get_channel_votage(0, _adc_data);
+
+        float ia = raw_to_current(_adc_data[0].data),
+              ib = raw_to_current(_adc_data[1].data), ic = -ia - ib;
         // todo: timer sync, current read
 
-        // todo: park transform
-
+        alpha_beta_t clark_res = transforms::clark({
+            .a = ia,
+            .b = ib,
+            .c = ic,
+        });
         // todo: clark transform
 
+        d_q_t park_res =
+            transforms::park(clark_res, angle * configs.pole_pairs);
+        // todo: park transform
+
+        target_d_q.q = current.pid_flow(-park_res.q + want_d_q.q);
+        // target_d_q.d = current.pid_flow(-park_res.d + want_d_q.d);
+        // target_d_q.q = (want_d_q.q - park_res.q) * 0.15f;
+        target_d_q.d = (want_d_q.d - park_res.d) * 0.15f;
+
+        printf("%f,%f,%f,%f,", park_res.q, park_res.d, target_d_q.q,target_d_q.d);
+        printf("%f,%f,%f", ia, ib, ic);
         // todo: pid controller
     }
     printf("\n");
