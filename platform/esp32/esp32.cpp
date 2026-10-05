@@ -28,6 +28,7 @@
 #include <cstdio>
 // #include <cstdio>
 #include <cstring>
+#include <stdlib.h>
 #include <string>
 
 namespace gpio {
@@ -219,14 +220,16 @@ namespace pwm {
 #define MAX_PWM_CH_NUM 5
 
     mcpwm_timer_handle_t timer_handle;
-    struct phase_handle_t {
+    struct channel_handle_t {
         mcpwm_oper_handle_t op_handle;
         mcpwm_cmpr_handle_t cmp_handle;
         mcpwm_gen_handle_t gen_handle;
     };
-    std::array<phase_handle_t, MAX_PWM_CH_NUM> phase_handle;
+    std::array<channel_handle_t, MAX_PWM_CH_NUM> channel_handle;
 
     mcpwm_timer_config_t timer_config;
+
+    on_timer_full_cb_t on_timer_full_cb = nullptr;
 
     uint8_t channel_nums = 0;
     float half_duty_coef = 1.0f; // not sure weather is correct
@@ -239,6 +242,10 @@ namespace pwm {
         ch = ++channel_nums - 1;
         return OK;
     }
+    inline bool _cbs_on_full(mcpwm_timer_handle_t timer,
+        const mcpwm_timer_event_data_t *edata, void *user_ctx) {
+        return false;
+    };
 
     FUNC_RET init_timer(const timer_config_t &config) {
         timer_config = {
@@ -259,17 +266,20 @@ namespace pwm {
             timer_config.resolution_hz *= 2;
         }
 
-        mcpwm_timer_event_callbacks_t timer_callbacks;
-
         if (ESP_OK != mcpwm_new_timer(&timer_config, &timer_handle)) {
             return ERROR;
         }
-        // no timer callbacks are used currently
-        // if (ESP_OK !=
-        //     mcpwm_timer_register_event_callbacks(
-        //         timer_handle, &timer_callbacks, nullptr)) {
-        //     return ERROR;
-        // }
+
+        // set up timer callbacks
+        mcpwm_timer_event_callbacks_t timer_callbacks = {
+            .on_full  = _cbs_on_full,
+            .on_empty = nullptr,
+            .on_stop  = nullptr,
+        };
+        if (ESP_OK != mcpwm_timer_register_event_callbacks(
+                          timer_handle, &timer_callbacks, nullptr)) {
+            return ERROR;
+        }
 
         // enable timer but not start for now
         if (ESP_OK != mcpwm_timer_enable(timer_handle)) {
@@ -295,17 +305,17 @@ namespace pwm {
         }
 
         if (ESP_OK != mcpwm_new_operator(&operator_config,
-                          &(phase_handle[ch].op_handle))) { // oper init
+                          &(channel_handle[ch].op_handle))) { // oper init
             return ERROR;
         }
-        if (ESP_OK != mcpwm_new_comparator(phase_handle[ch].op_handle,
+        if (ESP_OK != mcpwm_new_comparator(channel_handle[ch].op_handle,
                           &comparator_config,
-                          &(phase_handle[ch].cmp_handle))) { // cmpr init
+                          &(channel_handle[ch].cmp_handle))) { // cmpr init
             return ERROR;
         }
-        if (ESP_OK != mcpwm_new_generator(phase_handle[ch].op_handle,
+        if (ESP_OK != mcpwm_new_generator(channel_handle[ch].op_handle,
                           &generator_config,
-                          &(phase_handle[ch].gen_handle))) { // gen init
+                          &(channel_handle[ch].gen_handle))) { // gen init
             return ERROR;
         }
         // could causing problem if not using up & down
@@ -331,21 +341,21 @@ namespace pwm {
         // may apply a fix when is truly affectted later.
         if (timer_config.count_mode & 0x1) {
             mcpwm_generator_set_action_on_compare_event(
-                phase_handle[ch].gen_handle,
+                channel_handle[ch].gen_handle,
                 MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP,
-                    phase_handle[ch].cmp_handle, MCPWM_GEN_ACTION_HIGH));
+                    channel_handle[ch].cmp_handle, MCPWM_GEN_ACTION_HIGH));
             // for testing, not use gen_action for now
         }
         if (timer_config.count_mode & 0x2) {
             mcpwm_generator_set_action_on_compare_event(
-                phase_handle[ch].gen_handle,
+                channel_handle[ch].gen_handle,
                 MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN,
-                    phase_handle[ch].cmp_handle, MCPWM_GEN_ACTION_LOW));
+                    channel_handle[ch].cmp_handle, MCPWM_GEN_ACTION_LOW));
             // for testing, not use gen_action for now
         }
 
         if (ESP_OK !=
-            mcpwm_operator_connect_timer(phase_handle[ch].op_handle,
+            mcpwm_operator_connect_timer(channel_handle[ch].op_handle,
                 timer_handle)) { // op connect timer
             return ERROR;
         }
@@ -385,7 +395,7 @@ namespace pwm {
             return ERROR;
         }
         if (ESP_OK != mcpwm_comparator_set_compare_value(
-                          phase_handle[channel].cmp_handle,
+                          channel_handle[channel].cmp_handle,
                           (uint32_t)(half_duty_coef * duty *
                                      timer_config.period_ticks))) {
             return ERROR;
@@ -397,20 +407,35 @@ namespace pwm {
 // work in progress
 // and haven't done much abstract yet!!!
 // APIs are under testing and learning!!!
+// adc sampling would be trigerred by timer,
+// so may using oneshot mode?
 namespace adc {
-    static adc_continuous_evt_data_t adc_raw_buffer = {};
+    static constexpr size_t kFrameBufSize =
+        SOC_ADC_DIGI_DATA_BYTES_PER_CONV * 2;
+    static std::array<uint8_t, kFrameBufSize> adc_frame_buf  = {};
+    static volatile adc_continuous_evt_data_t adc_raw_buffer = {
+        .conv_frame_buffer = adc_frame_buf.data(),
+    };
     adc_continuous_handle_t adc_handle;
     uint8_t adc_channels_used = 0;
 
     static bool IRAM_ATTR _on_conv_done(adc_continuous_handle_t handle,
         const adc_continuous_evt_data_t *edata, void *user_data) {
         // printf("isr");
-        // todo: lock acquire 
-        std::memcpy(&adc_raw_buffer, edata,
-            sizeof(adc_continuous_evt_data_t)); // copy adc buffer
+
+        // todo: lock acquire
+        if (nullptr == adc_raw_buffer.conv_frame_buffer) {
+            return false;
+        }
+
+        std::memcpy(adc_raw_buffer.conv_frame_buffer,
+            edata->conv_frame_buffer,
+            (size_t)edata->size); // copy adc buffer
+        adc_raw_buffer.size = edata->size;
+
         // todo: lock release
 
-        return true;
+        return false;
     }
     FUNC_RET add_channel(uint8_t &ch) {
 
@@ -420,10 +445,9 @@ namespace adc {
 
         // shall not cache data for too long ?
         adc_continuous_handle_cfg_t adc_handle_config = {
-            .max_store_buf_size =
-                SOC_ADC_DIGI_DATA_BYTES_PER_CONV * 4, // double buffer
-            .conv_frame_size = SOC_ADC_DIGI_DATA_BYTES_PER_CONV * 2,
-            .flags           = {.flush_pool = 1},
+            .max_store_buf_size = kFrameBufSize * 2, // double buffer
+            .conv_frame_size    = kFrameBufSize,
+            .flags              = {.flush_pool = 1},
         };
         ESP_ERROR_CHECK(
             adc_continuous_new_handle(&adc_handle_config, &adc_handle));
@@ -470,20 +494,21 @@ namespace adc {
         return OK;
     }
 
-    FUNC_RET get_channel_votage(uint8_t ch,std::array<adc_res_t,5> &data) {
-        std::array<adc_continuous_data_t,5> parsed={};
+    FUNC_RET get_channel_votage(
+        uint8_t ch, std::array<adc_res_t, 5> &data) {
+        std::array<adc_continuous_data_t, 5> parsed = {};
         uint32_t samples;
         adc_continuous_parse_data(adc_handle,
-            adc_raw_buffer.conv_frame_buffer, adc_raw_buffer.size, parsed.data(),
-            &samples);
-        for (uint8_t i=0;i<5;i++){
-            data[i].ch=parsed[i].channel;
-            data[i].data=parsed[i].raw_data;
+            adc_raw_buffer.conv_frame_buffer, adc_raw_buffer.size,
+            parsed.data(), &samples);
+        for (uint8_t i = 0; i < 5; i++) {
+            data[i].ch   = parsed[i].channel;
+            data[i].data = parsed[i].raw_data;
         }
         return OK;
     }
 
-    void calibration(uint8_t &ch) {}
+    void calibration(uint8_t &ch) {};
 
 } // namespace adc
 

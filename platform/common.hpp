@@ -103,6 +103,7 @@ inline namespace pltf {
                 HIGH,
             } action_on_exceed;
         };
+        typedef ret_val_t (*on_timer_full_cb_t)(void);
 
         FUNC_RET init_timer(const timer_config_t &config);
         FUNC_RET add_channel(const channel_config_t &config, uint8_t &ch);
@@ -127,6 +128,7 @@ inline namespace pltf {
             uint8_t ch, std::array<adc_res_t, 5> &data);
 
         void calibration(uint8_t &ch);
+        void set_zero(uint8_t &ch);
 
         // private:
     } // namespace adc
