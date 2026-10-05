@@ -5,4 +5,5 @@ target_link_libraries(driver PRIVATE
     idf::esp_driver_i2c
     idf::esp_driver_gpio
     idf::esp_driver_mcpwm
-    idf::driver)
+    idf::driver
+    idf::esp_adc)
