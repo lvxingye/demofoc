@@ -42,18 +42,38 @@ public:
         float kd = 0.0f;
     };
 
-    pid_controller_t(
-        float sample_peroid, const coef_t &coef = {0.0f, 0.0f, 0.0f});
+    struct limit_t {
+        float min = -1.0f;
+        float max = 1.0f;
+    };
+    struct terms_t {
+        float p = 0.0f;
+        float i = 0.0f;
+        float d = 0.0f;
+    };
+
+    pid_controller_t(float sample_period,
+        const coef_t &coef = {0.0f, 0.0f, 0.0f},
+        const limit_t &output_limit = {-1.0f, 1.0f},
+        const limit_t &integral_limit = {-1.0f, 1.0f});
     ~pid_controller_t() = default;
 
-    void set_coef(const coef_t &coef= {0.0f, 0.0f, 0.0f});
+    void set_coef(const coef_t &coef = {0.0f, 0.0f, 0.0f});
+    void set_output_limit(const limit_t &limit);
+    void set_integral_limit(const limit_t &limit);
+    void reset();
+    terms_t get_last_terms() const;
     float pid_flow(float in);
 
 private:
     coef_t coef;
-    float last_input = 0.0f, last_output = 0.0f,
-          sample_freq = 0.0f; // use freqency instead of sampling
-                              // peroid, avoid division
+    limit_t output_limit;
+    limit_t integral_limit;
+    terms_t last_terms;
+    float last_input = 0.0f, integral = 0.0f, sample_period = 0.0f;
+    bool has_last_input = false;
+
+    static float clamp(float x, const limit_t &limit);
 
 #ifdef BUILD_PID_ANALYSIS
     float t_i = 0.0f,

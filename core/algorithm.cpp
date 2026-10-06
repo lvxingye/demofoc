@@ -122,8 +122,11 @@ abc_phase_t transforms::svpwm(alpha_beta_t x, float theta) {
 }
 
 // pid controller
-pid_controller_t::pid_controller_t(float sample_peroid, const coef_t &coef)
-    : coef(coef), sample_freq(1.0f / sample_peroid) {}
+pid_controller_t::pid_controller_t(float sample_period,
+    const coef_t &coef, const limit_t &output_limit,
+    const limit_t &integral_limit)
+    : coef(coef), output_limit(output_limit),
+      integral_limit(integral_limit), sample_period(sample_period) {}
 
 /**
  * @brief Update the PID coefficients.
@@ -131,25 +134,62 @@ pid_controller_t::pid_controller_t(float sample_peroid, const coef_t &coef)
  */
 void pid_controller_t::set_coef(const coef_t &coef) { this->coef = coef; }
 
+void pid_controller_t::set_output_limit(const limit_t &limit) {
+    output_limit = limit;
+}
+
+void pid_controller_t::set_integral_limit(const limit_t &limit) {
+    integral_limit = limit;
+    integral       = clamp(integral, integral_limit);
+}
+
+void pid_controller_t::reset() {
+    last_input     = 0.0f;
+    integral       = 0.0f;
+    last_terms     = {};
+    has_last_input = false;
+}
+
+pid_controller_t::terms_t pid_controller_t::get_last_terms() const {
+    return last_terms;
+}
+
+float pid_controller_t::clamp(float x, const limit_t &limit) {
+    if (x < limit.min) {
+        return limit.min;
+    }
+    if (x > limit.max) {
+        return limit.max;
+    }
+    return x;
+}
+
 /**
  * @brief Compute the PID output for a single sample.
  * @param in Current error/input value.
- * @return Controller output, or 0 if the sample frequency is 0.
+ * @return Limited controller output, or 0 if the sample period is invalid.
  */
 float pid_controller_t ::pid_flow(float in) {
-    float output = 0.0f;
-
-    if (0.0f == sample_freq) {
+    if (0.0f >= sample_period) {
         return 0.0f;
     }
 
-    output =
-        (coef.kp + coef.ki * sample_freq + coef.kd * sample_freq) * in +
-        -coef.kd * sample_freq * last_input + coef.ki * last_output;
+    integral = clamp(integral + coef.ki * in * sample_period,
+        integral_limit);
 
-    last_input  = in;
-    last_output = output;
+    const float derivative =
+        has_last_input ? (in - last_input) / sample_period : 0.0f;
+    last_terms = {
+        .p = coef.kp * in,
+        .i = integral,
+        .d = coef.kd * derivative,
+    };
 
+    float output = last_terms.p + last_terms.i + last_terms.d;
+    output       = clamp(output, output_limit);
+
+    last_input     = in;
+    has_last_input = true;
     return output;
 }
 #ifdef BUILD_PID_ANALYSIS

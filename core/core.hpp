@@ -27,7 +27,7 @@ public:
   ret_val_t init();
 
   ret_val_t test_correct_phase ();
-  ret_val_t loop (bool is_open_loop = true);
+  ret_val_t loop (bool is_open_loop = false);
 
 // private:
   float u_dc = 0.0f;
